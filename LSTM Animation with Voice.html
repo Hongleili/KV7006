@@ -1,0 +1,495 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LSTM Ultimate Lecture – Enlarged Full Animated</title>
+<style>
+  :root{
+    --bg1:#08111f; --bg2:#0f1b33; --ink:#edf3ff; --muted:#9db0d0;
+    --purple:#9b7bff; --forget:#ff5f6d; --input:#41d67a; --cand:#ffb14a; --output:#57a6ff;
+    --shadow:0 16px 40px rgba(0,0,0,.30);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:Arial, Helvetica, sans-serif; color:var(--ink);
+    background:
+      radial-gradient(circle at 20% 10%, rgba(87,166,255,.12), transparent 24%),
+      radial-gradient(circle at 80% 0%, rgba(155,123,255,.12), transparent 28%),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+    overflow:hidden;
+  }
+  .app{
+    height:100vh;
+    padding:8px 12px 8px;
+    display:grid;
+    grid-template-rows:auto 1fr;
+    gap:8px;
+  }
+  .top{
+    display:grid;
+    grid-template-columns:1fr 290px;
+    gap:8px;
+  }
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    backdrop-filter: blur(8px);
+  }
+  .titleCard{padding:8px 14px 8px;}
+  h1{margin:0; text-align:center; font-size:32px; line-height:1.08;}
+  .subtitle{margin-top:3px; text-align:center; font-size:15px; color:var(--muted);}
+  .legend{
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:6px;
+  }
+  .pill{
+    display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:999px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.06);
+    font-size:12px; font-weight:700;
+  }
+  .dot{width:10px;height:10px;border-radius:50%}
+  .status{padding:8px 10px 8px;}
+  .stepNum{color:#bca9ff; font-weight:800; font-size:13px;}
+  .stepTitle{font-size:18px; font-weight:800; margin-top:2px;}
+  .stepText{font-size:12.5px; line-height:1.28; color:#dbe7ff; margin-top:4px;}
+  .modeBadge{
+    display:inline-block; margin-top:6px; padding:4px 8px; border-radius:999px;
+    background:rgba(255,255,255,.06); color:#cfe0ff; font-size:12px; font-weight:800;
+  }
+  .controls{display:flex; flex-wrap:wrap; gap:6px; margin-top:7px;}
+  button{
+    border:none; border-radius:10px; padding:7px 10px; font-size:12px; font-weight:800; cursor:pointer;
+  }
+  .ghost{background:#24314f;color:#eef3ff}
+  .primary{background:#7f63ff;color:#fff}
+  .success{background:#1d9b55;color:#fff}
+  .warn{background:#ffb14a;color:#1d1400}
+  .danger{background:#b62949;color:#fff}
+  .speedRow{
+    margin-top:6px; display:flex; align-items:center; gap:8px; font-size:12px; color:#bdd0ee; font-weight:700;
+  }
+  input[type=range]{width:120px}
+  .question{
+    margin-top:6px; padding:8px; border-radius:12px; background:rgba(255,177,74,.12);
+    border:1px solid rgba(255,177,74,.35); display:none;
+  }
+  .question.show{display:block}
+  .questionTitle{font-size:14px; font-weight:800; color:#ffd18c;}
+  .questionText{margin-top:4px; font-size:12px; line-height:1.25;}
+  .answer{display:none; margin-top:5px; font-size:11.5px; color:#fff0d3;}
+  .answer.show{display:block}
+  .main{
+    min-height:0;
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 290px;
+    gap:8px;
+  }
+  .canvasCard{
+    min-height:0;
+    padding:6px;
+    display:grid;
+    grid-template-rows:auto 1fr auto auto;
+    gap:6px;
+  }
+  .progress{
+    display:grid; grid-template-columns:repeat(6,1fr); gap:5px;
+  }
+  .mini{
+    padding:5px 4px; text-align:center; border-radius:10px; font-size:11px; font-weight:800;
+    color:#9fb1d1; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+  }
+  .mini.active{
+    color:#fff; background:rgba(127,99,255,.18); border-color:rgba(188,169,255,.55);
+    box-shadow:0 8px 18px rgba(127,99,255,.18);
+  }
+  .svgWrap{
+    min-height:0; overflow:hidden; border-radius:16px;
+    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+  }
+  svg{
+    width:100%; height:100%; display:block;
+  }
+  .summary{
+    padding:8px 10px; font-size:15px; line-height:1.2; border-radius:12px;
+    background:rgba(155,123,255,.12); border:1px solid rgba(155,123,255,.3);
+  }
+  .bottomCompact{
+    display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+  }
+  .timeline{
+    height:8px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  .bar{height:100%; width:0%; background:linear-gradient(90deg,#7f63ff,#57a6ff); transition:width .08s linear;}
+  .stepIndicator{
+    font-size:14px; font-weight:800; color:#d7e3ff; white-space:nowrap;
+  }
+  .scriptCard{
+    min-height:0; padding:8px 10px;
+    display:grid; grid-template-rows:auto auto 1fr auto;
+    gap:7px;
+  }
+  .scriptTitle{font-size:17px; font-weight:800;}
+  .scriptBlock{font-size:16px; line-height:1.28; overflow:auto; padding-right:4px;}
+  .protip{
+    font-size:12.5px; line-height:1.25; color:#d0ddf8; padding:8px; border-radius:10px;
+    background:rgba(87,166,255,.09); border:1px solid rgba(87,166,255,.22);
+  }
+  .hidden{opacity:0}
+  .normal{opacity:1}
+  .flow{stroke-dasharray:16 10; animation:dash 1.3s linear infinite}
+  .flowSlow{stroke-dasharray:20 12; animation:dash 2.1s linear infinite}
+  .pulse{animation:pulse 1.15s ease-in-out infinite}
+  @keyframes dash{to{stroke-dashoffset:-52}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+</style>
+
+<style>
+.fade{opacity:0.2 !important}
+.highlight{opacity:1 !important; filter:drop-shadow(0 0 6px #fff)}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="card titleCard">
+      <h1>LSTM Ultimate Lecture Version</h1>
+      <div class="subtitle">Enlarged full animated diagram with more space below the gate labels</div>
+      <div class="legend">
+        <div class="pill"><span class="dot" style="background:#ff5f6d"></span>Forget Gate</div>
+        <div class="pill"><span class="dot" style="background:#41d67a"></span>Input Gate</div>
+        <div class="pill"><span class="dot" style="background:#ffb14a"></span>Candidate Memory</div>
+        <div class="pill"><span class="dot" style="background:#57a6ff"></span>Output Gate</div>
+        <div class="pill"><span class="dot" style="background:#9b7bff"></span>Cell State</div>
+      </div>
+    </div>
+    <div class="card status">
+      <div class="stepNum" id="stepNum">Step 1 of 6</div>
+      <div class="stepTitle" id="stepTitle">Previous Memory</div>
+      <div class="stepText" id="stepText">Start with the old cell state <b>cₜ₋₁</b>. This carries useful information from earlier time steps.</div>
+      <div class="modeBadge" id="modeLabel">Mode: Manual</div>
+      <div class="controls">
+        <button class="ghost" onclick="prevStep()">◀ Back</button>
+        <button class="primary" onclick="nextStep()">Next ▶</button>
+        <button class="success" id="playBtn" onclick="toggleAutoplay()">▶ Start autoplay</button>
+        <button class="warn" onclick="toggleQuestion()">Pause / Ask</button>
+      </div>
+      <div class="speedRow">
+        Speed
+        <input type="range" id="speed" min="1500" max="5500" step="200" value="2800" oninput="updateSpeedLabel()">
+        <span id="speedLabel">2.8s per step</span>
+      </div>
+      <div class="question" id="questionBox">
+        <div class="questionTitle">Pause here & ask</div>
+        <div class="questionText" id="questionText">What happens if the forget gate output is close to 0?</div>
+        <div class="controls">
+          <button class="ghost" onclick="showAnswer()">Show answer</button>
+          <button class="primary" onclick="resumeFromQuestion()">Resume</button>
+        </div>
+        <div class="answer" id="answerText">The old memory is mostly erased, so very little of the previous cell state continues forward.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="card canvasCard">
+      <div class="progress">
+        <div class="mini active" id="m1">1. Old memory</div>
+        <div class="mini" id="m2">2. Forget</div>
+        <div class="mini" id="m3">3. Input</div>
+        <div class="mini" id="m4">4. Candidate</div>
+        <div class="mini" id="m5">5. Update</div>
+        <div class="mini" id="m6">6. Output</div>
+      </div>
+
+      <div class="svgWrap">
+        <!-- Enlarged by using more vertical screen space and a tighter viewBox crop -->
+        <svg id="lstmSvg" viewBox="40 20 1080 560" preserveAspectRatio="xMidYMid meet" aria-label="Enlarged animated LSTM lecture diagram">
+          <defs>
+            <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#9b7bff"></polygon></marker>
+            <marker id="arrowRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#ff5f6d"></polygon></marker>
+            <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#41d67a"></polygon></marker>
+            <marker id="arrowOrange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#ffb14a"></polygon></marker>
+            <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#57a6ff"></polygon></marker>
+            <marker id="arrowBlack" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><polygon points="0,0 10,5 0,10" fill="#e7eefc"></polygon></marker>
+          </defs>
+
+          <!-- Outer cell dropped slightly and enlarged visually by crop -->
+          <rect x="140" y="95" width="810" height="400" rx="42" fill="rgba(255,255,255,.03)" stroke="rgba(159,191,147,.42)" stroke-width="3"/>
+
+          <rect x="45" y="112" width="100" height="50" rx="12" fill="rgba(155,123,255,.12)" stroke="rgba(188,169,255,.55)"/>
+          <text x="95" y="144" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">cₜ₋₁</text>
+          <text x="95" y="180" text-anchor="middle" font-size="15" font-weight="700" fill="#b9c8e4">previous memory</text>
+
+          <rect x="45" y="260" width="100" height="50" rx="12" fill="rgba(155,123,255,.08)" stroke="rgba(188,169,255,.35)"/>
+          <text x="95" y="292" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">hₜ₋₁</text>
+          <text x="95" y="328" text-anchor="middle" font-size="15" font-weight="700" fill="#b9c8e4">previous hidden</text>
+
+          <rect x="45" y="382" width="100" height="50" rx="12" fill="rgba(87,166,255,.12)" stroke="rgba(87,166,255,.42)"/>
+          <text x="95" y="414" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">xₜ</text>
+          <text x="95" y="450" text-anchor="middle" font-size="15" font-weight="700" fill="#b9c8e4">current input</text>
+
+          <rect x="972" y="112" width="92" height="50" rx="12" fill="rgba(155,123,255,.12)" stroke="rgba(188,169,255,.55)"/>
+          <text x="1018" y="144" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">cₜ</text>
+          <text x="1018" y="180" text-anchor="middle" font-size="15" font-weight="700" fill="#b9c8e4">new memory</text>
+
+          <rect x="972" y="382" width="92" height="50" rx="12" fill="rgba(87,166,255,.12)" stroke="rgba(87,166,255,.42)"/>
+          <text x="1018" y="414" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">hₜ</text>
+          <text x="1018" y="450" text-anchor="middle" font-size="15" font-weight="700" fill="#b9c8e4">new hidden</text>
+
+          <path d="M145 408 H 760" fill="none" stroke="rgba(87,166,255,.42)" stroke-width="3"/>
+          <path d="M145 285 H 880" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"/>
+          <path d="M145 137 H 972" fill="none" stroke="rgba(155,123,255,.42)" stroke-width="3"/>
+
+          <g id="oldMemoryGroup">
+            <path d="M145 137 H 300" fill="none" stroke="#9b7bff" stroke-width="8" marker-end="url(#arrowPurple)" class="flow pulse"/>
+            <text x="230" y="104" text-anchor="middle" font-size="24" font-weight="800" fill="#c9baff">old memory flows in</text>
+          </g>
+
+          <!-- Gate labels remain high, but extra space below added by lower bottom content -->
+          <g id="forgetGroup" class="hidden">
+            <rect x="255" y="170" width="145" height="175" rx="20" fill="rgba(255,95,109,.07)" stroke="#ff5f6d" stroke-width="2.5" stroke-dasharray="8 6"/>
+            <text x="327" y="195" text-anchor="middle" font-size="28" font-weight="800" fill="#ff98a1">Forget Gate</text>
+            <rect x="298" y="240" width="58" height="46" rx="12" fill="rgba(255,255,255,.06)" stroke="#ff5f6d" stroke-width="2"/>
+            <text x="327" y="270" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">σ</text>
+            <circle cx="327" cy="137" r="23" fill="rgba(255,255,255,.05)" stroke="#ff5f6d" stroke-width="3"/>
+            <text x="327" y="145" text-anchor="middle" font-size="32" font-weight="800" fill="#fff">×</text>
+            <path d="M215 408 V 285 H 298" fill="none" stroke="#e7eefc" stroke-width="3" marker-end="url(#arrowBlack)"/>
+            <path d="M215 285 V 286 H 298" fill="none" stroke="#e7eefc" stroke-width="3" marker-end="url(#arrowBlack)"/>
+            <path d="M327 286 V 160" fill="none" stroke="#ff5f6d" stroke-width="6" marker-end="url(#arrowRed)" class="flow"/>
+            <text x="352" y="225" font-size="28" font-weight="800" fill="#ff98a1">fₜ</text>
+          </g>
+
+          <g id="inputGroup" class="hidden">
+            <rect x="465" y="170" width="145" height="175" rx="20" fill="rgba(65,214,122,.07)" stroke="#41d67a" stroke-width="2.5" stroke-dasharray="8 6"/>
+            <text x="537" y="195" text-anchor="middle" font-size="28" font-weight="800" fill="#8bf1af">Input Gate</text>
+            <rect x="508" y="240" width="58" height="46" rx="12" fill="rgba(255,255,255,.06)" stroke="#41d67a" stroke-width="2"/>
+            <text x="537" y="270" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">σ</text>
+            <path d="M425 408 V 285 H 508" fill="none" stroke="#e7eefc" stroke-width="3" marker-end="url(#arrowBlack)"/>
+            <path d="M425 285 V 286 H 508" fill="none" stroke="#e7eefc" stroke-width="3" marker-end="url(#arrowBlack)"/>
+            <path d="M537 408 V 286" fill="none" stroke="#41d67a" stroke-width="6" marker-end="url(#arrowGreen)" class="flow"/>
+            <text x="562" y="225" font-size="28" font-weight="800" fill="#8bf1af">iₜ</text>
+          </g>
+
+          <g id="candGroup" class="hidden">
+            <rect x="640" y="170" width="168" height="175" rx="20" fill="rgba(255,177,74,.07)" stroke="#ffb14a" stroke-width="2.5" stroke-dasharray="8 6"/>
+            <text x="724" y="195" text-anchor="middle" font-size="27" font-weight="800" fill="#ffd18c">Candidate Memory</text>
+            <rect x="688" y="240" width="72" height="46" rx="12" fill="rgba(255,255,255,.06)" stroke="#ffb14a" stroke-width="2"/>
+            <text x="724" y="270" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">tanh</text>
+            <circle cx="724" cy="240" r="23" fill="rgba(255,255,255,.05)" stroke="#41d67a" stroke-width="3"/>
+            <text x="724" y="248" text-anchor="middle" font-size="32" font-weight="800" fill="#fff">×</text>
+            <path d="M622 408 V 285 H 688" fill="none" stroke="#e7eefc" stroke-width="3" marker-end="url(#arrowBlack)"/>
+            <path d="M622 285 V 286 H 688" fill="none" stroke="#e7eefc" stroke-width="3" marker-end="url(#arrowBlack)"/>
+            <path d="M537 286 H 702 V 218" fill="none" stroke="#41d67a" stroke-width="5" marker-end="url(#arrowGreen)" class="flow"/>
+            <path d="M724 286 V 218" fill="none" stroke="#ffb14a" stroke-width="6" marker-end="url(#arrowOrange)" class="flow"/>
+            <text x="750" y="226" font-size="28" font-weight="800" fill="#d3c6ff">Ĉₜ</text>
+          </g>
+
+          <g id="updateGroup" class="hidden">
+            <circle cx="845" cy="137" r="23" fill="rgba(255,255,255,.05)" stroke="#9b7bff" stroke-width="3"/>
+            <text x="845" y="146" text-anchor="middle" font-size="36" font-weight="800" fill="#fff">+</text>
+            <path d="M350 137 H 820" fill="none" stroke="#9b7bff" stroke-width="8" marker-end="url(#arrowPurple)" class="flowSlow"/>
+            <path d="M724 218 H 845 V 160" fill="none" stroke="#e7eefc" stroke-width="5" marker-end="url(#arrowBlack)" class="flow"/>
+            <path d="M868 137 H 972" fill="none" stroke="#9b7bff" stroke-width="8" marker-end="url(#arrowPurple)" class="flowSlow pulse"/>
+            <text x="845" y="103" text-anchor="middle" font-size="21" font-weight="800" fill="#d3c6ff">kept old memory + selected new memory</text>
+          </g>
+
+          <g id="outputGroup" class="hidden">
+            <rect x="802" y="350" width="158" height="126" rx="20" fill="rgba(87,166,255,.07)" stroke="#57a6ff" stroke-width="2.5" stroke-dasharray="8 6"/>
+            <text x="881" y="378" text-anchor="middle" font-size="28" font-weight="800" fill="#9fccff">Output Gate</text>
+            <rect x="852" y="410" width="58" height="46" rx="12" fill="rgba(255,255,255,.06)" stroke="#57a6ff" stroke-width="2"/>
+            <text x="881" y="440" text-anchor="middle" font-size="30" font-weight="800" fill="#fff">σ</text>
+            <rect x="842" y="198" width="78" height="46" rx="12" fill="rgba(255,255,255,.06)" stroke="#9b7bff" stroke-width="2"/>
+            <text x="881" y="227" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">tanh</text>
+            <circle cx="948" cy="300" r="23" fill="rgba(255,255,255,.05)" stroke="#57a6ff" stroke-width="3"/>
+            <text x="948" y="308" text-anchor="middle" font-size="32" font-weight="800" fill="#fff">×</text>
+            <path d="M868 137 V 198 H 881" fill="none" stroke="#9b7bff" stroke-width="5" marker-end="url(#arrowPurple)" class="flow"/>
+            <path d="M881 410 V 325" fill="none" stroke="#57a6ff" stroke-width="6" marker-end="url(#arrowBlue)" class="flow"/>
+            <path d="M948 325 V 407 H 972" fill="none" stroke="#57a6ff" stroke-width="8" marker-end="url(#arrowBlue)" class="flowSlow pulse"/>
+            <path d="M948 290 V 244 H 881" fill="none" stroke="#e7eefc" stroke-width="5" marker-end="url(#arrowBlack)" class="flow"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="summary" id="summary"><b>One-line summary:</b> LSTM uses gates to decide what to forget, what to store, and what to output.</div>
+      <div class="bottomCompact">
+        <div class="timeline"><div class="bar" id="bar"></div></div>
+        <div class="stepIndicator" id="stepIndicator">Step 1 / 6</div>
+      </div>
+    </div>
+
+    <div class="card scriptCard">
+      <div class="scriptTitle">Speaker Notes</div>
+      <div class="modeBadge">Built-in lecture cue</div>
+      <div class="scriptBlock" id="scriptBlock">“Start with the old memory. This is the information the network is carrying from the previous step.”</div>
+      <div class="protip" id="proTip">Teaching cue: Point to the purple line and say, “This is the long-term memory highway.”</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const steps = [
+  {num:"Step 1 of 6", title:"Previous Memory", text:"Start with the old cell state <b>cₜ₋₁</b>. This carries useful information from earlier time steps.", show:["oldMemoryGroup"], summary:"<b>One-line summary:</b> The cell state is the long-term memory line running across the top.", script:"“Start with the old memory. This is the information the network is carrying from the previous step.”", tip:"Teaching cue: Point to the purple line and say, “This is the long-term memory highway.”"},
+  {num:"Step 2 of 6", title:"Forget Gate", text:"The forget gate looks at <b>xₜ</b> and <b>hₜ₋₁</b> and decides how much of the old memory should be kept.", show:["oldMemoryGroup","forgetGroup"], summary:"<b>One-line summary:</b> Forget gate = filter for old memory. Near 0 means erase; near 1 means keep.", script:"“Now the forget gate asks a simple question: how much of the old memory is still useful?”", tip:"Teaching cue: Say, “0 means erase, 1 means keep.”"},
+  {num:"Step 3 of 6", title:"Input Gate", text:"The input gate decides how much new information should be written into memory.", show:["oldMemoryGroup","forgetGroup","inputGroup"], summary:"<b>One-line summary:</b> Input gate controls whether new information is important enough to store.", script:"“Next, the input gate decides whether the new information deserves a place in memory.”", tip:"Teaching cue: Compare it to human attention: we do not store every detail we see."},
+  {num:"Step 4 of 6", title:"Candidate Memory", text:"A candidate memory <b>Ĉₜ</b> is created from the current input and previous hidden state.", show:["oldMemoryGroup","forgetGroup","inputGroup","candGroup"], summary:"<b>One-line summary:</b> Candidate memory is the new content that could be added to the cell state.", script:"“Here the network creates candidate memory — new content that might be added if the input gate allows it.”", tip:"Teaching cue: Say, “This is only a proposal, not final memory yet.”"},
+  {num:"Step 5 of 6", title:"Update Cell State", text:"The LSTM combines kept old memory and selected new candidate memory. That produces the new cell state <b>cₜ</b>.", show:["oldMemoryGroup","forgetGroup","inputGroup","candGroup","updateGroup"], summary:"<b>One-line summary:</b> New memory = kept old memory + important new information.", script:"“Now the cell updates memory by combining what it kept from the past with the most useful new information.”", tip:"Teaching cue: Pause here and say, “This is the moment memory is rewritten.”"},
+  {num:"Step 6 of 6", title:"Output Gate", text:"Finally, the output gate decides what part of the new memory becomes the hidden state <b>hₜ</b>.", show:["oldMemoryGroup","forgetGroup","inputGroup","candGroup","updateGroup","outputGroup"], summary:"<b>One-line summary:</b> Output gate decides what the network reveals to the next layer or next time step.", script:"“Finally, the output gate decides what part of the new memory should be revealed as the hidden state.”", tip:"Teaching cue: End with: “LSTM makes three decisions — what to forget, what to add, and what to output.”"}
+];
+const questions = [
+  "Why is the cell state useful for long-term dependencies?",
+  "What happens if the forget gate output is close to 0?",
+  "Why do we need an input gate instead of storing everything?",
+  "Why do we call this candidate memory instead of final memory?",
+  "What two things are combined to form the new cell state?",
+  "Which part of the LSTM creates the new hidden state hₜ?"
+];
+const answers = [
+  "It provides a more stable path for information to move across many time steps.",
+  "The old memory is mostly erased, so very little is passed forward.",
+  "Because not all incoming information is useful. The input gate filters what deserves to be stored.",
+  "Because it is only a proposed memory update. It becomes part of memory only if the input gate allows it.",
+  "Kept old memory and selected new candidate memory are added together.",
+  "The output gate uses the updated memory to produce the hidden state."
+];
+const groups = ["oldMemoryGroup","forgetGroup","inputGroup","candGroup","updateGroup","outputGroup"];
+const minis = ["m1","m2","m3","m4","m5","m6"];
+let current = 0, autoplay = false, timer = null, duration = 2800, progressTimer = null;
+
+function renderStep(){
+  const s = steps[current];
+  document.getElementById("stepNum").innerHTML = s.num;
+  document.getElementById("stepTitle").innerHTML = s.title;
+  document.getElementById("stepText").innerHTML = s.text;
+  document.getElementById("summary").innerHTML = s.summary;
+  document.getElementById("scriptBlock").textContent = s.script;
+  document.getElementById("proTip").textContent = s.tip;
+  document.getElementById("stepIndicator").textContent = `Step ${current+1} / ${steps.length}`;
+
+  groups.forEach(id => {
+    const el = document.getElementById(id);
+    if (s.show.includes(id)) { el.classList.remove("hidden"); el.classList.add("normal"); }
+    else { el.classList.add("hidden"); el.classList.remove("normal"); }
+  });
+  minis.forEach(id => document.getElementById(id).classList.remove("active"));
+  document.getElementById(minis[current]).classList.add("active");
+  document.getElementById("questionBox").classList.remove("show");
+  document.getElementById("answerText").classList.remove("show");
+  startProgressBar();
+}
+function nextStep(){ if(current < steps.length - 1){ current += 1; renderStep(); } else { stopAutoplay(); } }
+function prevStep(){ current = Math.max(0, current - 1); renderStep(); }
+function updateSpeedLabel(){
+  duration = parseInt(document.getElementById("speed").value, 10);
+  document.getElementById("speedLabel").textContent = (duration/1000).toFixed(1) + "s per step";
+  if(autoplay){ stopAutoplay(); startAutoplay(); } else { startProgressBar(); }
+}
+function startAutoplay(){
+  autoplay = true;
+  document.getElementById("modeLabel").textContent = "Mode: Autoplay";
+  document.getElementById("playBtn").textContent = "❚❚ Pause autoplay";
+  document.getElementById("playBtn").className = "danger";
+  clearInterval(timer);
+  timer = setInterval(() => { if(current < steps.length - 1){ current += 1; renderStep(); } else { stopAutoplay(); } }, duration);
+  startProgressBar();
+}
+function stopAutoplay(){
+  autoplay = false;
+  clearInterval(timer); timer = null;
+  document.getElementById("modeLabel").textContent = "Mode: Manual";
+  document.getElementById("playBtn").textContent = "▶ Start autoplay";
+  document.getElementById("playBtn").className = "success";
+  clearInterval(progressTimer);
+  document.getElementById("bar").style.width = "0%";
+}
+function toggleAutoplay(){ autoplay ? stopAutoplay() : startAutoplay(); }
+function startProgressBar(){
+  clearInterval(progressTimer);
+  const bar = document.getElementById("bar");
+  bar.style.width = "0%";
+  if(!autoplay) return;
+  let elapsed = 0;
+  progressTimer = setInterval(() => {
+    if(!autoplay){ clearInterval(progressTimer); return; }
+    elapsed += 60;
+    const pct = Math.min((elapsed/duration)*100, 100);
+    bar.style.width = pct + "%";
+    if(pct >= 100) clearInterval(progressTimer);
+  }, 60);
+}
+function toggleQuestion(){
+  if(autoplay) stopAutoplay();
+  document.getElementById("questionText").textContent = questions[current];
+  document.getElementById("answerText").textContent = answers[current];
+  document.getElementById("questionBox").classList.add("show");
+}
+function showAnswer(){ document.getElementById("answerText").classList.add("show"); }
+function resumeFromQuestion(){
+  document.getElementById("questionBox").classList.remove("show");
+  document.getElementById("answerText").classList.remove("show");
+}
+document.addEventListener("keydown", e => {
+  if(e.code === "Space"){ e.preventDefault(); nextStep(); }
+  if(e.key === "a" || e.key === "A"){ toggleAutoplay(); }
+  if(e.key === "q" || e.key === "Q"){ toggleQuestion(); }
+  if(e.key === "ArrowLeft"){ prevStep(); }
+  if(e.key === "ArrowRight"){ nextStep(); }
+});
+renderStep();
+</script>
+
+<script>
+function updateHighlight(){
+  const all = ["forgetGroup","inputGroup","candGroup","updateGroup","outputGroup"];
+  all.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add("fade");
+    el.classList.remove("highlight");
+  });
+
+  let active = all[current-1];
+  if(current>0 && document.getElementById(active)){
+    document.getElementById(active).classList.remove("fade");
+    document.getElementById(active).classList.add("highlight");
+  }
+}
+const originalRender = renderStep;
+renderStep = function(){
+  originalRender();
+  updateHighlight();
+}
+</script>
+
+
+<script>
+let narration = [
+"Start with the previous memory flowing into the cell.",
+"The forget gate decides what information to remove.",
+"The input gate selects new important information.",
+"The candidate memory creates new content.",
+"The cell state is updated by combining old and new information.",
+"The output gate produces the final hidden state."
+];
+
+function speakStep(){
+  let msg = new SpeechSynthesisUtterance(narration[current]);
+  msg.rate = 0.9;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(msg);
+}
+
+const originalRender2 = renderStep;
+renderStep = function(){
+  originalRender2();
+  speakStep();
+}
+</script>
+
+</body>
+</html>

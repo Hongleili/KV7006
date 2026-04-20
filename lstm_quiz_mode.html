@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSTM Quiz Mode</title>
+<style>
+:root{--bg1:#08111f;--bg2:#0f1b33;--ink:#edf3ff;--muted:#9db0d0;--purple:#9b7bff;--forget:#ff5f6d;--input:#41d67a;--cand:#ffb14a;--output:#57a6ff;}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:linear-gradient(180deg,var(--bg1),var(--bg2));}
+.wrap{max-width:1300px;margin:0 auto;padding:18px;}
+.top{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:18px 22px;margin-bottom:14px;}
+h1{margin:0;text-align:center;font-size:42px;}
+.sub{margin-top:8px;text-align:center;color:var(--muted);font-size:22px;}
+.main{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:16px;}
+.progress{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:12px;}
+.mini{padding:9px;text-align:center;border-radius:12px;font-weight:700;font-size:14px;background:rgba(255,255,255,.04);color:#aebee0;}
+.mini.active{background:rgba(155,123,255,.18);color:#fff;border:1px solid rgba(188,169,255,.45);}
+svg{width:100%;height:auto;display:block;background:rgba(255,255,255,.02);border-radius:18px;}
+.qtitle{font-size:30px;font-weight:800;margin-bottom:10px;}
+.question{font-size:23px;line-height:1.35;margin-bottom:14px;}
+.answers{display:grid;gap:10px;}
+.answer{padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#edf3ff;font-size:18px;text-align:left;cursor:pointer;}
+.answer:hover{background:rgba(255,255,255,.08);}
+.answer.correct{background:rgba(65,214,122,.18);border-color:rgba(65,214,122,.5);}
+.answer.wrong{background:rgba(255,95,109,.18);border-color:rgba(255,95,109,.5);}
+.feedback{margin-top:14px;min-height:78px;border-radius:14px;padding:12px 14px;font-size:18px;line-height:1.35;background:rgba(255,255,255,.04);}
+.controls{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+button.ctrl{border:none;border-radius:14px;padding:12px 16px;font-size:16px;font-weight:800;cursor:pointer;}
+.primary{background:#7f63ff;color:#fff;}
+.ghost{background:#24314f;color:#fff;}
+.good{background:#1d9b55;color:#fff;}
+.score{font-size:20px;font-weight:800;color:#dbe7ff;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top">
+<h1>LSTM Quiz Mode</h1>
+<div class="sub">Students must answer correctly before moving to the next step.</div>
+</div>
+<div class="main">
+<div class="card">
+<div class="progress">
+<div class="mini active" id="m1">1. Old memory</div>
+<div class="mini" id="m2">2. Forget</div>
+<div class="mini" id="m3">3. Input</div>
+<div class="mini" id="m4">4. Candidate</div>
+<div class="mini" id="m5">5. Update</div>
+<div class="mini" id="m6">6. Output</div>
+</div>
+<svg viewBox="40 20 1080 560" preserveAspectRatio="xMidYMid meet">
+<rect x="140" y="95" width="810" height="400" rx="42" fill="rgba(255,255,255,.03)" stroke="rgba(159,191,147,.42)" stroke-width="3"/>
+<rect x="45" y="112" width="100" height="50" rx="12" fill="rgba(155,123,255,.12)" stroke="rgba(188,169,255,.55)"/><text x="95" y="144" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">cₜ₋₁</text>
+<rect x="45" y="260" width="100" height="50" rx="12" fill="rgba(155,123,255,.08)" stroke="rgba(188,169,255,.35)"/><text x="95" y="292" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">hₜ₋₁</text>
+<rect x="45" y="382" width="100" height="50" rx="12" fill="rgba(87,166,255,.12)" stroke="rgba(87,166,255,.42)"/><text x="95" y="414" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">xₜ</text>
+<rect x="972" y="112" width="92" height="50" rx="12" fill="rgba(155,123,255,.12)" stroke="rgba(188,169,255,.55)"/><text x="1018" y="144" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">cₜ</text>
+<rect x="972" y="382" width="92" height="50" rx="12" fill="rgba(87,166,255,.12)" stroke="rgba(87,166,255,.42)"/><text x="1018" y="414" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">hₜ</text>
+<g id="forgetGroup"><rect x="255" y="170" width="145" height="175" rx="20" fill="rgba(255,95,109,.07)" stroke="#ff5f6d" stroke-width="2.5"/><text x="327" y="195" text-anchor="middle" font-size="28" font-weight="800" fill="#ff98a1">Forget Gate</text></g>
+<g id="inputGroup"><rect x="465" y="170" width="145" height="175" rx="20" fill="rgba(65,214,122,.07)" stroke="#41d67a" stroke-width="2.5"/><text x="537" y="195" text-anchor="middle" font-size="28" font-weight="800" fill="#8bf1af">Input Gate</text></g>
+<g id="candGroup"><rect x="640" y="170" width="168" height="175" rx="20" fill="rgba(255,177,74,.07)" stroke="#ffb14a" stroke-width="2.5"/><text x="724" y="195" text-anchor="middle" font-size="27" font-weight="800" fill="#ffd18c">Candidate Memory</text></g>
+<g id="updateGroup"><circle cx="845" cy="137" r="23" fill="rgba(255,255,255,.05)" stroke="#9b7bff" stroke-width="3"/><text x="845" y="146" text-anchor="middle" font-size="36" font-weight="800" fill="#fff">+</text></g>
+<g id="outputGroup"><rect x="802" y="350" width="158" height="126" rx="20" fill="rgba(87,166,255,.07)" stroke="#57a6ff" stroke-width="2.5"/><text x="881" y="378" text-anchor="middle" font-size="28" font-weight="800" fill="#9fccff">Output Gate</text></g>
+</svg>
+</div>
+<div class="card">
+<div class="qtitle" id="qtitle">Question 1</div>
+<div class="question" id="question"></div>
+<div class="answers" id="answers"></div>
+<div class="feedback" id="feedback">Choose an answer to continue.</div>
+<div class="controls">
+<button class="ctrl ghost" onclick="resetCurrent()">Reset question</button>
+<button class="ctrl primary" id="nextBtn" onclick="nextStep()" disabled>Next step</button>
+<button class="ctrl good" onclick="restartQuiz()">Restart quiz</button>
+</div>
+<div class="score" id="score">Score: 0 / 6</div>
+</div>
+</div>
+</div>
+<script>
+const data = [
+{title:"Question 1",q:"What does the previous cell state c(t-1) represent?",options:["The final output of the whole network","Long-term memory carried from earlier time steps","A random initialization value","The learning rate"],correct:1,explain:"Correct. c(t-1) is the memory coming from the previous time step."},
+{title:"Question 2",q:"What is the main role of the forget gate?",options:["To choose the learning rate","To erase or keep old memory","To create the final class label","To normalize the inputs"],correct:1,explain:"Correct. The forget gate filters old memory, deciding what to keep and what to remove."},
+{title:"Question 3",q:"Why is an input gate useful?",options:["It lets the model store every new detail","It decides whether new information deserves to be written into memory","It replaces the output gate","It prevents any new information from entering"],correct:1,explain:"Correct. The input gate filters new information before it is stored."},
+{title:"Question 4",q:"What is candidate memory?",options:["The final hidden state h(t)","A proposed new memory content that may be added","The forget gate output","The training loss"],correct:1,explain:"Correct. Candidate memory is new content that could be stored if the input gate allows it."},
+{title:"Question 5",q:"How is the new cell state c(t) formed?",options:["By deleting all old memory","By combining kept old memory with selected new information","By copying the hidden state directly","By averaging all gate values"],correct:1,explain:"Correct. The update combines retained past memory and useful new content."},
+{title:"Question 6",q:"What does the output gate decide?",options:["Which optimizer to use","What part of the updated memory becomes h(t)","How many epochs to train","Whether the sequence is valid"],correct:1,explain:"Correct. The output gate controls what the network reveals as the hidden state."}
+];
+let current = 0, score = 0, answered = Array(data.length).fill(false);
+function render(){
+  const item = data[current];
+  document.getElementById("qtitle").textContent = item.title;
+  document.getElementById("question").textContent = item.q;
+  document.getElementById("feedback").textContent = "Choose an answer to continue.";
+  document.getElementById("nextBtn").disabled = true;
+  const answers = document.getElementById("answers");
+  answers.innerHTML = "";
+  item.options.forEach((opt, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "answer";
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(idx, btn);
+    answers.appendChild(btn);
+  });
+  for(let i=1;i<=6;i++){ document.getElementById("m"+i).classList.toggle("active", i===current+1); }
+  highlightDiagram();
+  document.getElementById("score").textContent = `Score: ${score} / 6`;
+}
+function highlightDiagram(){
+  const ids = ["forgetGroup","inputGroup","candGroup","updateGroup","outputGroup"];
+  ids.forEach(id => document.getElementById(id).style.opacity = 0.22);
+  if(current===0){ ids.forEach(id => document.getElementById(id).style.opacity = 0.35); }
+  if(current===1) document.getElementById("forgetGroup").style.opacity = 1;
+  if(current===2) document.getElementById("inputGroup").style.opacity = 1;
+  if(current===3) document.getElementById("candGroup").style.opacity = 1;
+  if(current===4) document.getElementById("updateGroup").style.opacity = 1;
+  if(current===5) document.getElementById("outputGroup").style.opacity = 1;
+}
+function checkAnswer(idx, btn){
+  if(answered[current]) return;
+  const item = data[current];
+  if(idx === item.correct){
+    btn.classList.add("correct");
+    document.getElementById("feedback").textContent = item.explain;
+    document.getElementById("nextBtn").disabled = false;
+    answered[current] = true;
+    score += 1;
+  } else {
+    btn.classList.add("wrong");
+    document.getElementById("feedback").textContent = "Not quite. Try again before moving on.";
+  }
+  document.getElementById("score").textContent = `Score: ${score} / 6`;
+}
+function nextStep(){
+  if(!answered[current]) return;
+  if(current < data.length - 1){ current += 1; render(); }
+  else {
+    document.getElementById("qtitle").textContent = "Quiz complete";
+    document.getElementById("question").textContent = "Well done. You completed the LSTM quiz.";
+    document.getElementById("answers").innerHTML = "";
+    document.getElementById("feedback").textContent = `Final score: ${score} / 6`;
+    document.getElementById("nextBtn").disabled = true;
+  }
+}
+function resetCurrent(){ answered[current] = false; render(); }
+function restartQuiz(){ current = 0; score = 0; answered = Array(data.length).fill(false); render(); }
+render();
+</script>
+</body>
+</html>
