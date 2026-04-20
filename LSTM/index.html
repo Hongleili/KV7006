@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSTM Teaching Hub</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial, Helvetica, sans-serif;
+  background:linear-gradient(180deg,#08111f,#0f1b33);
+  color:#edf3ff;
+}
+
+/* Layout */
+.container{
+  max-width:1000px;
+  margin:auto;
+  padding:20px;
+  text-align:center;
+}
+
+/* Header */
+h1{font-size:40px;margin-bottom:5px;}
+p{color:#9db0d0;margin-bottom:20px;}
+
+/* Login */
+.login{
+  margin-bottom:20px;
+}
+input{
+  padding:10px;
+  border-radius:8px;
+  border:none;
+  margin-right:10px;
+}
+button{
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+/* Buttons */
+.buttons{
+  display:grid;
+  gap:15px;
+  margin-top:20px;
+}
+.main{background:#7f63ff;color:white;}
+.quiz{background:#1d9b55;color:white;}
+.voice{background:#57a6ff;color:white;}
+
+/* Progress */
+.progress{
+  margin-top:20px;
+  font-size:18px;
+}
+
+/* Video */
+video{
+  width:100%;
+  margin-top:20px;
+  border-radius:12px;
+}
+
+/* Mobile */
+@media (max-width:600px){
+  h1{font-size:28px;}
+  button{font-size:16px;}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>LSTM Teaching Hub</h1>
+<p>Interactive Learning Platform</p>
+
+<!-- LOGIN -->
+<div class="login">
+<input id="name" placeholder="Enter your name">
+<button onclick="login()">Login</button>
+</div>
+
+<div id="welcome"></div>
+
+<!-- BUTTONS -->
+<div class="buttons">
+<button class="main" onclick="openPage('lstm_highlight_sequential.html')">🎬 Animation</button>
+<button class="quiz" onclick="openPage('lstm_quiz_mode.html')">🧪 Quiz</button>
+<button class="voice" onclick="openPage('lstm_with_voice.html')">🔊 Voice</button>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress" id="progress"></div>
+
+<!-- VIDEO -->
+<video controls>
+<source src="lstm_teaching_video.mp4" type="video/mp4">
+</video>
+
+</div>
+
+<script>
+
+/* LOGIN */
+function login(){
+  let name = document.getElementById("name").value;
+  if(name){
+    localStorage.setItem("student", name);
+    loadUser();
+  }
+}
+
+function loadUser(){
+  let name = localStorage.getItem("student");
+  if(name){
+    document.getElementById("welcome").innerHTML = "👋 Welcome, " + name;
+  }
+}
+
+/* PROGRESS TRACKING */
+function updateProgress(page){
+  let progress = JSON.parse(localStorage.getItem("progress")) || {};
+  progress[page] = true;
+  localStorage.setItem("progress", JSON.stringify(progress));
+  showProgress();
+}
+
+function showProgress(){
+  let progress = JSON.parse(localStorage.getItem("progress")) || {};
+  let completed = Object.keys(progress).length;
+  document.getElementById("progress").innerHTML =
+    "📊 Progress: " + completed + " / 3 completed";
+}
+
+/* NAVIGATION */
+function openPage(page){
+  updateProgress(page);
+  window.location.href = page;
+}
+
+/* INIT */
+loadUser();
+showProgress();
+
+</script>
+
+</body>
+</html>
